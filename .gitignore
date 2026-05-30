@@ -4,4 +4,6 @@ var/log/*.log
 var/log/*.jsonl
 home/**
 !home/.gitkeep
+contacts/**
+!contacts/.gitkeep
 .DS_Store

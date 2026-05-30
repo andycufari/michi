@@ -20,15 +20,21 @@ import * as config from '../lib/config.js';
 
 loadEnv(path.join(ROOT, '.env'));
 
-// Parse args: pull out --config <name>, keep the rest positional.
+// Parse args: pull out --config <name> and --contact <id>, keep rest positional.
 const argv = process.argv.slice(2);
 let profile = null;
+let contactId = null;
 const rest = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--config' || argv[i] === '-c') { profile = argv[++i]; }
+  else if (argv[i] === '--contact') { contactId = argv[++i]; }
   else rest.push(argv[i]);
 }
 const cmd = rest.shift();
+
+// Active contact → env, so the loop injects their card + offers the contact tool,
+// and the contact tool's ops are scoped to THIS person's sandbox.
+if (contactId) process.env.MICHI_CONTACT = contactId;
 
 // Apply the resolved config profile to the environment (brain, boot, limits,
 // tool setup) BEFORE anything reads env. config governs; .env only holds secrets.
@@ -45,12 +51,30 @@ if (cmd === 'task') {
   console.log(JSON.stringify(res, null, 2));
 } else if (cmd === 'serve') {
   serve();
-} else if (cmd === 'config') {
-  await configTUI();
 } else if (cmd === 'whoami') {
-  console.log(JSON.stringify({ profile: activeConfig._profile, ...whoami() }, null, 2));
+  console.log(JSON.stringify({ profile: activeConfig._profile, contact: contactId || null, ...whoami() }, null, 2));
+} else if (cmd === 'contact') {
+  await contactCmd(rest);
 } else {
-  console.error('usage: michi <task|serve|config|whoami> … [--config <profile>]');
+  console.error('usage: michi <task|serve|whoami|contact> … [--config <profile>] [--contact <id>]');
+  process.exit(1);
+}
+
+// michi contact list | show <id> | add <id> '{json patch}' | remember <id> "line"
+async function contactCmd(args) {
+  const c = await import('../lib/contacts.js');
+  const sub = args.shift();
+  if (sub === 'list' || !sub) { console.log(JSON.stringify(c.list(), null, 2)); return; }
+  if (sub === 'show') { console.log(JSON.stringify(c.get(args[0]), null, 2)); return; }
+  if (sub === 'add' || sub === 'set') {
+    const id = args.shift();
+    let patch = {};
+    try { patch = JSON.parse(args.join(' ') || '{}'); } catch { console.error('patch must be JSON'); process.exit(1); }
+    console.log(JSON.stringify(c.upsert(id, patch), null, 2));
+    return;
+  }
+  if (sub === 'remember') { console.log(JSON.stringify(c.remember(args.shift(), args.join(' ')))); return; }
+  console.error('usage: michi contact <list|show <id>|add <id> \'{json}\'|remember <id> "line">');
   process.exit(1);
 }
 

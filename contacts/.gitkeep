@@ -1,0 +1,3 @@
+Contacts live here, one folder per contact: contacts/<id>/
+Each holds: contact.json (identity+trust+memory) and the agent's sandboxed work
+files for that person. Real contact folders are gitignored (private).
