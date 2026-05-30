@@ -55,6 +55,13 @@
       "skills": ["ship-cm64-site", "code-review"],
       "limits": { "maxSteps": 40, "historyBudget": 24000 },
       "comment": "Michi as a one-person dev agency on CM64 — persona context + build/review skills. Example of composing a persona from the shared library."
+    },
+
+    "local": {
+      "brain": { "provider": "lmstudio", "model": "qwen/qwen3.5-9b", "vision": true },
+      "boot": "lean",
+      "limits": { "maxSteps": 15 },
+      "comment": "Local brain via LM Studio (Qwen3.5-VL 9B) — free, private, multimodal. For bring-up + dogfooding without API cost."
     }
   }
 }
