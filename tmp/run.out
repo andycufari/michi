@@ -1,0 +1,15 @@
+[michi] profile: local  brain: {"provider":"lmstudio","model":"qwen/qwen3.5-9b","kind":"openai","vision":true}
+  ▶ task: Check what device is connected. Run movicom doctor, then tell me in one sentence the device name and the foreground app.
+  💭 
+
+
+  ▶ movicom {"command":"doctor"}
+  ◀ {"adb":"1.0.41","adbValidated":"1.0.41","device":null,"focus":null}
+  ✅ 
+{
+  "runId": "20260530-152917",
+  "status": "done",
+  "summary": "",
+  "steps": 2,
+  "ctxTokens": 484
+}
