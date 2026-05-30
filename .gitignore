@@ -1,0 +1,7 @@
+node_modules/
+.env
+var/log/*.log
+var/log/*.jsonl
+home/**
+!home/.gitkeep
+.DS_Store

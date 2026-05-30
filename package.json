@@ -1,0 +1,19 @@
+{
+  "name": "michios",
+  "version": "0.1.0",
+  "description": "A tiny OS for an autonomous LLM agent (Michi). One brain (any API), one body (a phone, via movicom), a home folder, and a control panel.",
+  "type": "module",
+  "bin": {
+    "michi": "bin/michi.js"
+  },
+  "scripts": {
+    "start": "node bin/michi.js serve",
+    "task": "node bin/michi.js task",
+    "panel": "node bin/michi.js serve"
+  },
+  "keywords": ["agent", "llm", "autonomous", "movicom", "android", "deepseek", "qwen", "ollama", "anthropic"],
+  "author": "Andy Cufari",
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MichiOS · control panel</title>
+<style>
+  :root { --bg:#0d0f12; --panel:#15191e; --ink:#d7dde3; --dim:#7c8794; --acc:#f2b705; --line:#222831; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; background:var(--bg); color:var(--ink); }
+  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; }
+  header b { color:var(--acc); }
+  #brain { color:var(--dim); font-size:12px; }
+  .wrap { display:grid; grid-template-columns:240px 1fr 1fr; height:calc(100vh - 49px); }
+  .col { overflow:auto; border-right:1px solid var(--line); padding:12px; }
+  .col h3 { margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); }
+  .item { padding:4px 6px; border-radius:4px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .item:hover { background:#1d232b; }
+  .item.sel { background:#222d38; color:var(--acc); }
+  pre { white-space:pre-wrap; word-break:break-word; margin:0; }
+  .ev { padding:6px 8px; margin:4px 0; border-left:3px solid var(--line); border-radius:0 4px 4px 0; background:var(--panel); }
+  .ev.think { border-color:#5b9bd5; } .ev.act { border-color:var(--acc); }
+  .ev.observe { border-color:#3a4350; color:var(--dim); } .ev.done { border-color:#4caf50; }
+  .ev.error,.ev.stopped { border-color:#e05260; }
+  .k { font-size:10px; text-transform:uppercase; color:var(--dim); letter-spacing:.06em; }
+  .send { display:flex; gap:8px; padding:10px 16px; border-top:1px solid var(--line); background:var(--panel); }
+  .send input { flex:1; background:#0d0f12; border:1px solid var(--line); color:var(--ink); padding:8px; border-radius:6px; font:inherit; }
+  .send button { background:var(--acc); border:0; color:#1a1300; font-weight:600; padding:8px 16px; border-radius:6px; cursor:pointer; }
+  .crumb { color:var(--dim); margin-bottom:6px; font-size:12px; }
+  a { color:var(--acc); }
+</style>
+</head>
+<body>
+<header>
+  <b>🐱 MichiOS</b>
+  <span id="brain">…</span>
+  <span style="margin-left:auto;color:var(--dim)" id="status"></span>
+</header>
+<div class="wrap">
+  <div class="col" id="runsCol">
+    <h3>Runs</h3>
+    <div id="runs"></div>
+    <h3 style="margin-top:20px">home/</h3>
+    <div id="files"></div>
+  </div>
+  <div class="col" id="streamCol">
+    <h3>Stream</h3>
+    <div id="stream"><div class="crumb">Pick a run, or send a task →</div></div>
+  </div>
+  <div class="col" id="viewCol">
+    <h3>Viewer</h3>
+    <div id="viewer"><div class="crumb">Click a file or event.</div></div>
+  </div>
+</div>
+<div class="send">
+  <input id="task" placeholder="Give Michi a task…  (e.g. open settings and tell me the wifi name)" />
+  <button onclick="sendTask()">Send</button>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let curRun = null, timer = null;
+
+async function api(p){ const r = await fetch(p); return r.json(); }
+
+async function init(){
+  const w = await api('/api/whoami');
+  $('#brain').textContent = `brain: ${w.provider}/${w.model||'?'}`;
+  await refreshRuns(); await refreshFiles('');
+  setInterval(refreshRuns, 4000);
+}
+
+async function refreshRuns(){
+  const { runs } = await api('/api/runs');
+  $('#runs').innerHTML = runs.map(r =>
+    `<div class="item ${r===curRun?'sel':''}" onclick="openRun('${r}')">${r.replace('run-','').replace('.jsonl','')}</div>`
+  ).join('') || '<div class="crumb">no runs yet</div>';
+}
+
+async function openRun(run){
+  curRun = run;
+  await refreshRuns();
+  clearInterval(timer);
+  const draw = async () => {
+    const { events } = await api('/api/log?run=' + encodeURIComponent(run));
+    $('#stream').innerHTML = events.map(e => {
+      let body = '';
+      if (e.kind==='think') body = e.text;
+      else if (e.kind==='act') body = `<b>${e.tool}</b> ${esc(JSON.stringify(e.args))}`;
+      else if (e.kind==='observe') body = esc(String(e.result));
+      else if (e.kind==='done') body = e.summary;
+      else if (e.kind==='start') body = 'task: ' + esc(e.task);
+      else body = esc(JSON.stringify(e));
+      return `<div class="ev ${e.kind}"><div class="k">${e.kind}${e.step?(' · '+e.step):''}</div><pre>${esc(body)}</pre></div>`;
+    }).join('');
+    const last = events[events.length-1];
+    $('#status').textContent = last ? last.kind : '';
+    $('#stream').scrollTop = $('#stream').scrollHeight;
+    // keep polling while the run is active
+    if (!last || !['done','error','stopped'].includes(last.kind)) timer = setTimeout(draw, 1500);
+  };
+  draw();
+}
+
+async function refreshFiles(rel){
+  const data = await api('/api/files?path=' + encodeURIComponent(rel));
+  if (data.entries){
+    const up = rel ? `<div class="item" onclick="refreshFiles('${parent(rel)}')">../</div>` : '';
+    $('#files').innerHTML = up + data.entries.map(e =>
+      `<div class="item" onclick="${e.dir?`refreshFiles('${join(rel,e.name)}')`:`openFile('${join(rel,e.name)}')`}">${e.dir?'📁':'📄'} ${e.name}</div>`
+    ).join('') || '<div class="crumb">empty</div>';
+  }
+}
+async function openFile(rel){
+  const data = await api('/api/files?path=' + encodeURIComponent(rel));
+  $('#viewer').innerHTML = `<div class="crumb">home/${esc(rel)}</div><pre>${esc(data.content||'')}</pre>`;
+}
+
+async function sendTask(){
+  const task = $('#task').value.trim(); if(!task) return;
+  $('#task').value='';
+  await fetch('/api/task',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({task})});
+  $('#status').textContent='sent…';
+  setTimeout(async()=>{ const {runs}=await api('/api/runs'); if(runs[0]) openRun(runs[0]); }, 800);
+}
+
+function esc(s){ return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function join(a,b){ return a?a+'/'+b:b; }
+function parent(p){ const i=p.lastIndexOf('/'); return i===-1?'':p.slice(0,i); }
+$('#task').addEventListener('keydown',e=>{ if(e.key==='Enter') sendTask(); });
+init();
+</script>
+</body>
+</html>

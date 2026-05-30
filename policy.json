@@ -1,0 +1,47 @@
+{
+  "_comment": "Michi's permission policy. The shell tool checks every proposed command against these BEFORE running it. Precedence: deny wins, then allow; anything matching neither is BLOCKED (default-deny) and Michi is told why. Patterns use '*' wildcards and are matched per sub-command (split on && || | ; ). Edit this file by hand — Michi never writes here.",
+
+  "allow": [
+    "movicom *",
+    "movicom",
+    "cm64 *",
+    "ls", "ls *",
+    "cat *",
+    "head *", "tail *",
+    "grep *", "rg *", "grep", "rg",
+    "find *", "find",
+    "wc *", "wc",
+    "echo", "echo *",
+    "pwd",
+    "which *",
+    "stat *",
+    "file *",
+    "diff *",
+    "date",
+    "tree", "tree *",
+    "git status", "git log *", "git diff *", "git show *", "git branch",
+    "node *", "node",
+    "curl -s *", "curl --silent *"
+  ],
+
+  "deny": [
+    "rm -rf *",
+    "rm -rf /",
+    "* ~/.ssh*",
+    "cat *.env*",
+    "cat * .env*",
+    "* .env",
+    "* /etc/*",
+    "sudo *",
+    "shutdown *",
+    "reboot *",
+    "mkfs*",
+    "dd *",
+    "* > /dev/*",
+    "chmod -R *",
+    "git push *",
+    "npm publish*",
+    "* ~/.aws*",
+    "* ~/.config*"
+  ]
+}
