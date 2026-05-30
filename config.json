@@ -48,20 +48,20 @@
       "comment": "short, conservative autonomous check (read notifications, continue tasks)"
     },
 
-    "dev-agency": {
-      "brain": { "provider": "qwen", "model": "qwen3-vl-32b-instruct" },
+    "webmaster": {
+      "brain": { "provider": "lmstudio", "model": "qwen/qwen3.5-9b", "vision": true },
       "boot": "lean",
-      "context": ["context/dev-agency.md"],
-      "skills": ["ship-cm64-site", "code-review"],
+      "context": ["context/webmaster.md"],
+      "skills": ["cm64", "movicom"],
       "limits": { "maxSteps": 40, "historyBudget": 24000 },
-      "comment": "Michi as a one-person dev agency on CM64 — persona context + build/review skills. Example of composing a persona from the shared library."
+      "comment": "Michi as a webmaster agency in one agent — builds/maintains CM64 sites AND uses the phone. Persona + the cm64 and movicom skills (which teach the CLIs). Runs on local LM Studio (free). Switch the brain to qwen/anthropic for harder builds."
     },
 
     "local": {
       "brain": { "provider": "lmstudio", "model": "qwen/qwen3.5-9b", "vision": true },
       "boot": "lean",
       "limits": { "maxSteps": 15 },
-      "comment": "Local brain via LM Studio (Qwen3.5-VL 9B) — free, private, multimodal. For bring-up + dogfooding without API cost."
+      "comment": "Bare local brain via LM Studio (Qwen3.5-VL 9B) — free, private, multimodal. For bring-up + quick tests without a persona."
     }
   }
 }
