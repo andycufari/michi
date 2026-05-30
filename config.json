@@ -1,0 +1,60 @@
+{
+  "_comment": "MichiOS control plane. Non-secret, switchable settings governing the brain, boot profile, limits, and tool setup. Secrets (API keys, tokens) live in .env and are referenced here by env-var NAME, never by value. Security (the shell allow/deny gate) lives in policy.json. Profiles: `michi` uses `default`; `michi --config <name>` loads that named profile, falling back to default for any field it omits. Edit by hand, via `michi config` (TUI), or the admin panel.",
+
+  "default": {
+    "brain": {
+      "provider": "qwen",
+      "model": "qwen3-vl-30b-a3b-instruct",
+      "vision": true,
+      "temperature": 0.3
+    },
+    "boot": "lean",
+    "limits": {
+      "maxSteps": 25,
+      "historyBudget": 12000,
+      "keepTurns": 6
+    },
+    "tools": {
+      "movicom": {
+        "enabled": true,
+        "device": "",
+        "comment": "device = adb serial to target (e.g. emulator-5554 or an IP:port for wireless). Empty = whatever adb sees first."
+      },
+      "cm64": {
+        "enabled": false,
+        "project": "",
+        "comment": "cm64 project id Michi builds against; key env var name lives below"
+      }
+    }
+  },
+
+  "profiles": {
+    "deep": {
+      "brain": { "provider": "qwen", "model": "qwen3-vl-32b-instruct" },
+      "boot": "full",
+      "limits": { "maxSteps": 50, "historyBudget": 30000 },
+      "comment": "stronger dense model + full boot + more room — for hard, multi-step jobs"
+    },
+    "cheap": {
+      "brain": { "provider": "deepseek", "model": "deepseek-chat", "vision": false },
+      "boot": "lean",
+      "limits": { "maxSteps": 15 },
+      "comment": "text-only, cheapest brain — for jobs that never need to SEE the screen"
+    },
+    "heartbeat": {
+      "brain": { "provider": "qwen", "model": "qwen3-vl-30b-a3b-instruct" },
+      "boot": "lean",
+      "limits": { "maxSteps": 8 },
+      "comment": "short, conservative autonomous check (read notifications, continue tasks)"
+    },
+
+    "dev-agency": {
+      "brain": { "provider": "qwen", "model": "qwen3-vl-32b-instruct" },
+      "boot": "lean",
+      "context": ["context/dev-agency.md"],
+      "skills": ["ship-cm64-site", "code-review"],
+      "limits": { "maxSteps": 40, "historyBudget": 24000 },
+      "comment": "Michi as a one-person dev agency on CM64 — persona context + build/review skills. Example of composing a persona from the shared library."
+    }
+  }
+}

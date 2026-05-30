@@ -1,28 +1,43 @@
 #!/usr/bin/env node
 // michi.js — MichiOS entrypoint.
 //
-//   michi task "your task here"     run one task in the terminal (root mode)
-//   michi serve                     start the API + control panel
-//   michi whoami                    print the configured brain
+//   michi task "…" [--config <profile>]   run one task (root mode)
+//   michi serve                           start the API + control panel
+//   michi config                          interactive config TUI
+//   michi whoami [--config <profile>]     print the resolved brain
 //
-// Loads .env (no dependency), then dispatches.
+// Boot order: load .env (secrets) → load config.json profile (control plane) →
+// apply config to env → dispatch. --config picks the profile (default if absent).
 
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { fileURLToPath } from 'node:url';
+import readline from 'node:readline';
 import { runTask } from '../lib/agent.js';
 import { whoami } from '../lib/llm.js';
-import { ROOT, HOME } from '../lib/tools.js';
+import { ROOT, HOME } from '../lib/paths.js';
+import * as config from '../lib/config.js';
 
 loadEnv(path.join(ROOT, '.env'));
 
-const [cmd, ...rest] = process.argv.slice(2);
+// Parse args: pull out --config <name>, keep the rest positional.
+const argv = process.argv.slice(2);
+let profile = null;
+const rest = [];
+for (let i = 0; i < argv.length; i++) {
+  if (argv[i] === '--config' || argv[i] === '-c') { profile = argv[++i]; }
+  else rest.push(argv[i]);
+}
+const cmd = rest.shift();
+
+// Apply the resolved config profile to the environment (brain, boot, limits,
+// tool setup) BEFORE anything reads env. config governs; .env only holds secrets.
+const activeConfig = config.applyToEnv(config.load(profile));
 
 if (cmd === 'task') {
   const task = rest.join(' ').trim();
-  if (!task) { console.error('usage: michi task "…"'); process.exit(1); }
-  console.error(`[michi] brain: ${JSON.stringify(whoami())}`);
+  if (!task) { console.error('usage: michi task "…" [--config <profile>]'); process.exit(1); }
+  console.error(`[michi] profile: ${activeConfig._profile}  brain: ${JSON.stringify(whoami())}`);
   const res = await runTask(task, {
     mode: 'root',
     onStep: (s) => process.stderr.write(fmtStep(s) + '\n'),
@@ -30,10 +45,12 @@ if (cmd === 'task') {
   console.log(JSON.stringify(res, null, 2));
 } else if (cmd === 'serve') {
   serve();
+} else if (cmd === 'config') {
+  await configTUI();
 } else if (cmd === 'whoami') {
-  console.log(JSON.stringify(whoami(), null, 2));
+  console.log(JSON.stringify({ profile: activeConfig._profile, ...whoami() }, null, 2));
 } else {
-  console.error('usage: michi <task|serve|whoami> …');
+  console.error('usage: michi <task|serve|config|whoami> … [--config <profile>]');
   process.exit(1);
 }
 
@@ -88,6 +105,19 @@ function serve() {
     }
 
     if (url.pathname === '/api/whoami') return json(res, 200, whoami());
+
+    // ── config (admin panel control plane) ──
+    if (url.pathname === '/api/config' && req.method === 'GET') {
+      return json(res, 200, config.list());
+    }
+    if (url.pathname === '/api/config' && req.method === 'POST') {
+      if (!authed(req, token)) return json(res, 401, { error: 'unauthorized' });
+      const body = await readBody(req);
+      if (!body || !body.default) return json(res, 400, { error: 'config must have a default profile' });
+      try { config.save(body); }
+      catch (e) { return json(res, 500, { error: String(e.message || e) }); }
+      return json(res, 200, { saved: true });
+    }
 
     // ── panel UI ──
     if (url.pathname === '/' || url.pathname === '/index.html') {
