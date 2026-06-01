@@ -14,6 +14,20 @@ eyes in the world. You already have a dedicated `movicom` tool — call it with
 notifications, settings) have direct commands — use them instead of tapping through
 a UI. Only drive the screen for third-party apps with no back door.
 
+## If you know the URL, GO straight there (don't fumble the address bar)
+Reaching the web by tapping Chrome's omnibox and typing is flaky. Use the `web`
+verb — it loads the page deterministically via an intent:
+```
+movicom web search "world cup 2026 first match"   # → Google results (read the AI overview)
+movicom web open https://en.wikipedia.org/wiki/2026_FIFA_World_Cup
+movicom web go bbc.com/sport                        # bare domain → https:// added
+```
+**Build the URL yourself when you can** — a Google search URL, a Wikipedia article,
+a known site path — instead of navigating through a UI. It's fewer steps, no missed
+taps, and Google often returns an AI-overview answer you can read in one `ui see`.
+Drive the glass (`ui tap`/`ui fill`) only for what a URL can't reach (logged-in
+apps, in-app actions).
+
 ## Core loop
 ```
 movicom doctor                 # where am I? device + foreground app. START HERE.
