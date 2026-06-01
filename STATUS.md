@@ -125,3 +125,28 @@
 - Tools are movicom/fs/shell/skill only; other CLIs via shell + a skill.
 - Token efficiency is first-class.
 - **Always update this STATUS.md.**
+
+### 2026-06-01 (camera + AII/AIX token discipline)
+- **`movicom camera shot '{"pull":true}'`** — take a real photo in ONE call:
+  opens camera, clears permission dialogs, presses Shutter, finds the new image
+  via MediaStore (max _id; file lands in DCIM/ OR Pictures/), pulls it so the
+  multimodal brain can SEE it. Verified: captured + viewed a real 1440×1920 JPEG
+  (the emulator's green-landscape camera scene). Bug fixed: `--sort` flag quotes
+  get mangled through adbShell→execSync; scan rows + take max _id in JS instead.
+- **Used the phone for a real task:** "Buenos Aires weather tomorrow in °C" via
+  Chrome (open→fill search→ENTER→see). Answer read as TEXT, no screenshot:
+  **tomorrow (Tue) = Nublado, máx 14° / mín 11°.** 4 movicom calls.
+- **Cost lesson (Andy's question):** for the OPEN web / native apps / logged-in
+  stuff (Google search, Instagram, Rappi) there is NO api — movicom is the only
+  option, and it beats screenshots (text not pixels, no per-image $) and Chrome
+  extensions (no install/maintenance). Use a real API only when one exists (e.g.
+  weather). Decision tree lives in head; consider baking into the movicom skill.
+- **AII/AIX token fight** (Andy: "the text IS your UI… make it a menu… compact +
+  pages… wrap into your desired AI Interface/Experience"). A Google results page
+  dumped 115 actions = ~1350 tok of mostly junk (content was ~120). Fixed:
+  (1) noise filter (drop tracking URLs, encoded queries, nav/footer boilerplate);
+  (2) PAGINATION — show ~12 actions/page, report `page:"N/M"`, `ui more` for the
+  next page; full list cached so `ui tap` resolves a label on ANY page (no reach
+  lost). **Result: 1350 → 269 tokens (5×), same answer, same reach.**
+- movicom committed+pushed (camera, noise filter, pagination, ui more, ui see
+  <page#>). AGENTS.md documents the menu/paging AIX. Synced global + mirror.
