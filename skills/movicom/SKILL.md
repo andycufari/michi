@@ -38,9 +38,18 @@ off-screen — scroll and look again.
 - Vision fallback: `ui shot` — low-res screenshot, ONLY for text-less screens
   (captchas, image buttons). You are multimodal; use it when `ui see` has no text.
 
+## Reading a screen — it's a MENU, not a dump
+`ui see` and every action return a menu: `{where, actions[], fields[], text[],
+can_scroll, hint}`.
+- `where` = what app/screen you're on    - `actions` = labels you can `ui tap`
+- `fields` = inputs you can `ui fill` (by name; unnamed ones are "field 1", "field 2")
+- `text` = visible content    - `hint` = the exact next command to try
+Read the `hint`, pick from `actions`/`fields`. Don't reason about pixels.
+
 ## Self-discovery
-Run `movicom` (no args) or read its AGENTS.md for the full manual. Structured data
-(a contact, an sms) → prefer the direct command over typing. Output is always JSON.
+Run `movicom` (no args) for the verb list, or read its AGENTS.md / HOWTO.md for the
+full manual + phone setup. Structured data (a contact) → prefer the direct command
+over typing. Output is always JSON.
 
 ## Gotchas
 - `ui type` is async on-device; movicom settles between actions — but prefer

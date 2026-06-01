@@ -1,0 +1,9 @@
+[michi] profile: webmaster  brain: {"provider":"lmstudio","model":"qwen/qwen3.5-9b","kind":"openai","vision":true}
+  ▶ task: Introduce yourself in 2 sentences: who are you, and what can you do? Then list the tools you have available. Keep it short.
+  ❌ tools is not defined
+{
+  "runId": "20260530-163824",
+  "status": "error",
+  "error": "tools is not defined",
+  "steps": 1
+}
