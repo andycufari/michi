@@ -45,6 +45,50 @@
 
 ## Log
 
+### 2026-06-02 (qwen 9B drives the phone + the <context:…> protocol)
+- **MILESTONE: qwen3.5-9b (local, LM Studio) drove the real phone via Michi.**
+  `michi task … --config webmaster` → qwen emitted real tool_calls, ran movicom,
+  read the FRAME, and answered. Proven: opened WhatsApp + listed the first 3 chats
+  correctly (~1265 tok). The frame is what makes a 9B able to do this.
+- **Direct line to Michi:** `node bin/michi.js task "<task>" --config webmaster`
+  prints the live trace (💭 think / ▶ act / ◀ observe / · nudge / ✅ done). LM Studio
+  up at :1234 with qwen/qwen3.5-9b (vision). That's how to talk to Michi.
+- **THE <context:…> PROTOCOL (Andy's idea, generalized).** A harness-agnostic,
+  in-band directive language for context lifetime — there is NO LLM standard for
+  this, so we defined one. `lib/context-tags.js`:
+    <context:rm:N>…</context>          drop the block after N model-turns
+    <context:rm>…</context>            = rm:1
+    <context:keep>…</context>          pin; never trimmed
+    <context:supersede=TAG>…</context> only the LATEST block with TAG survives
+  The ENGINE parses + enforces (applyContextTags each turn; unwrap before send).
+  Producers just annotate. movicom screen reads are tagged `supersede=screen`, so
+  only the CURRENT screen stays in context; older frames collapse to a one-line
+  stub. Andy's principle: "keep the steps, the model doesn't need all the
+  interfaces." Readable fixed syntax (not a nonce) so it can be a shared format;
+  collision risk accepted (tiny). Works in coding mode too (a `cat`/`grep` dump
+  can be `<context:rm:1>`). Unit-tested: rm:N expiry, keep+unwrap, supersede
+  across 3 turns all correct.
+- **Result: context stays FLAT.** Same send task that died at step 5 with "Context
+  size exceeded" now runs 7 steps at ~1554 tok, no overflow. The protocol solved it.
+- **9B weaknesses found (the open frontier, NOT infra):**
+  1. STALLS after a tool result — emits an empty turn instead of continuing.
+     Fix shipped: agent.js NUDGE (re-prompt up to MAX_NUDGES=2 when last msg is a
+     tool result + trivial text). Helps, but not enough for long chains.
+  2. Picks plausible-but-WRONG frame items ("Andres picture" vs the chat row), and
+     HALLUCINATES success ("message sent") without verifying — ground truth showed
+     nothing sent. Navigation + self-verification is the 9B gap.
+  3. Gives up before finishing an action chain (got INTO the Andres chat with the
+     input as action #1, then declared done without type+send).
+- **movicom fix:** `app fresh` / `open home` emitted DOUBLE JSON (the inner
+  `home()` printed its own frame, then `{opened}`), so Michi parsed the launcher
+  frame and thought the app never opened. Now uses a SILENT home keyevent → one
+  clean JSON line. (committed earlier batch's sibling; sync global.)
+- **llm.js:** openai/lmstudio path now sets `max_tokens` (default 1024, env
+  MICHI_MAX_TOKENS) so a small-context local model keeps room for input.
+- NEXT: stronger persistence for the 9B — (a) nudge that detects "task not done"
+  not just "empty turn"; (b) a verify step baked into send macros; (c) try a bigger
+  local model (dolphin-24b is loaded) to isolate model-size vs harness gaps.
+
 ### 2026-06-02 (later) — TWO-LAYER architecture proven: agnostic frame + self-healing macros
 - **Andy's two insights closed the design:** (1) "navigation is app-agnostic —
   THAT's why we have workflows: macros for specific apps"; (2) "the model can save
