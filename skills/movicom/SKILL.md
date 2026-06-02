@@ -28,37 +28,48 @@ taps, and Google often returns an AI-overview answer you can read in one `ui see
 Drive the glass (`ui tap`/`ui fill`) only for what a URL can't reach (logged-in
 apps, in-app actions).
 
-## Core loop
+## Core loop — THE FRAME
 ```
 movicom doctor                 # where am I? device + foreground app. START HERE.
-movicom app open <name>        # go somewhere (deterministic, by package)
-movicom ui see                 # read the screen as cheap structured JSON
-movicom ui tap "<label>"       # act BY NAME, never by pixel coordinates
-movicom ui see                 # verify it changed
+movicom app fresh <name>       # open at a clean start point (force-stop + home + launch)
+movicom ui frame               # read the screen as {app, read[], do[]} (numbered)
+movicom ui do <n>              # act by NUMBER → returns the next frame
+movicom ui do <n> "text"      # act with text (e.g. type into an input)
 ```
-If you get lost: `movicom app open home` resets you.
+If you get lost: `movicom app fresh <name>` resets to that app's main screen.
 
-## Reading the screen — `ui see`
-Returns `{app, tap:[...], type:[...], read:[...], scroll}`.
-- `tap` = labels you can tap → `movicom ui tap "Wi-Fi"`
-- `type` = editable fields (values also in `read`)
-- `scroll:true` = `movicom ui scroll down` then `ui see` again
-Think in **names**; movicom holds the coordinates. A label missing? It may be
-off-screen — scroll and look again.
+## Reading the screen — `ui frame`
+Returns `{app, read:[...content...], do:["1 type <text>","2 send","3 up",...], pick}`.
+- `read` = the CONTENT on screen (messages, captions, list items). Read this.
+- `do` = the ACTIONS, each NUMBERED. Pick one with `ui do <n>`.
+- Every `ui do` returns the next frame, so you don't need a separate read.
+
+**Numbers vs verbs:**
+- `ui do 1` — a number is position-specific; great interactively (you just read the
+  frame, so you know what 1 is). Always read the frame before picking.
+- `ui do send` / `ui do type "x"` / `ui do back` — a VERB re-resolves against the
+  live screen. **Use verbs in workflows/macros** so they self-heal across UI changes.
+  Core verbs: `type` (+ `type2`, `type3` for multi-field forms), `send`, `up`, `down`,
+  `back`, `home`, `more`.
+- `ui do more` — page to the next batch of actions (inline, cheap).
+
+Don't reason about pixels. Read `read`, pick a number/verb from `do`.
 
 ## Verbs
-- System: `contacts list [q]` · `contacts find <q>` · `contacts add '{first,last,phone}'` · `notif list` · `app list`
-- UI: `ui see [--raw|--coords]` · `ui tap "<l>"` · `ui type "<t>"` · `ui key <BACK|HOME|ENTER|TAB>` · `ui scroll <dir>` · `ui back` · `ui home`
-- Vision fallback: `ui shot` — low-res screenshot, ONLY for text-less screens
-  (captchas, image buttons). You are multimodal; use it when `ui see` has no text.
+- System: `contacts list [q]` · `contacts find <q>` · `contacts add '{...}'` · `notif list` · `app list`
+- Apps: `app fresh <name>` (clean start) · `app open <name>` · `app store <name>` (Play Store page) · `app intent '{...}'`
+- Frame: `ui frame` · `ui do <n|verb> [text]` · `ui do more`
+- Low-level (when you need a specific element by name): `ui see` · `ui tap "<l>"` · `ui fill '{...}'` · `ui key <BACK|ENTER|...>` · `ui scroll <dir>`
+- Vision fallback: `ui shot` — low-res screenshot, ONLY for text-less screens. You
+  are multimodal; use it when a screen has no readable text.
 
-## Reading a screen — it's a MENU, not a dump
-`ui see` and every action return a menu: `{where, actions[], fields[], text[],
-can_scroll, hint}`.
-- `where` = what app/screen you're on    - `actions` = labels you can `ui tap`
-- `fields` = inputs you can `ui fill` (by name; unnamed ones are "field 1", "field 2")
-- `text` = visible content    - `hint` = the exact next command to try
-Read the `hint`, pick from `actions`/`fields`. Don't reason about pixels.
+## Installing apps & macros
+- `app store <name>` → the Play Store page (skips search + sponsored-ad trap), then
+  `ui do <Install>`. Logging in is the human's job — drive accounts, never create them.
+- Crystallize a done task into a macro (self-improving): `workflow add wa-send
+  '["app fresh whatsapp","ui tap $1","ui do type \"$2\"","ui do send"]'` then
+  `workflow run wa-send <chat> "<msg>"`. Use verb-mode `ui do` + `$`-params so it
+  self-heals. The frame is app-agnostic; workflows are the app-specific layer.
 
 ## Self-discovery
 Run `movicom` (no args) for the verb list, or read its AGENTS.md / HOWTO.md for the

@@ -45,6 +45,74 @@
 
 ## Log
 
+### 2026-06-02 (later) — TWO-LAYER architecture proven: agnostic frame + self-healing macros
+- **Andy's two insights closed the design:** (1) "navigation is app-agnostic —
+  THAT's why we have workflows: macros for specific apps"; (2) "the model can save
+  a workflow AFTER performing a task" (self-improving); (3) "workflows should start
+  from a SECURE POINT — reset to main menu, then open the app."
+- **The architecture (PROVEN on the real Moto G06, sent to Andres on WhatsApp):**
+  - **Layer 1 — agnostic frame** (`ui frame` + `ui do <n|verb>`): read+do, works on
+    any app, no app knowledge. The universal body.
+  - **Layer 2 — app macros** (`workflow`): parameterized ($1,$2), self-healing,
+    built ON TOP of layer 1. App-specific ergonomics live as DATA, not core code.
+- **`ui do` now takes a NUMBER (interactive) OR a VERB (macro).** `do 1` is
+  position-specific (fine live, wrong in a macro). `do type "x"` / `do send` /
+  `do back` RE-RESOLVE against the live frame each run → macros SELF-HEAL when the
+  UI shifts. `do` always rebuilds the frame first (killed the stale-numbering bug).
+- **`app fresh <name>`** = Andy's secure start point: force-stop + home + launch, so
+  a macro ALWAYS begins at the app's main screen (fixed: `ui tap Andres` had opened
+  ContactInfoActivity instead of the chat because replay started mid-app).
+- **`workflow run <name> a "b c"`** preserves quoted multi-word args (was shattering
+  $2 into $2,$3,$4… via re-join+re-tokenize; now passes argv array through intact).
+  `$1,$2,…,$*` substitution in steps.
+- **The self-improving loop (DECIDED):** model passes steps directly —
+  `workflow add wa-send '["app fresh whatsapp","ui tap $1","ui do type \"$2\"","ui do send"]'`
+  — with explicit $-params. No journal/recorder needed; the model knows what it ran.
+  Working macro: `workflow run wa-send Andres "..."` → message delivered, verified.
+- Classifier fix: phantom `send` on Settings ("Search settings" matched submit) —
+  `send` verb only emitted when an input ALSO exists; else demoted to a normal open.
+- `_clearInput()` (select-all+DEL) before typing in `do` input path (was appending
+  to leftover drafts). Frame `do` list drops nav-dup/timestamps/receipts into `read`.
+
+### 2026-06-02 — THE FRAME: app-agnostic numbered AIX (movicom redesign)
+- **Andy's reframe → my design.** Andy: "we should have a super easy android
+  remote control AGNOSTIC to apps… process the app to text… actions could be dots
+  → open dots… always print result after the action." He said *"this should be
+  YOUR design, you're the user."* So I designed the interface I actually want to
+  drive — the **FRAME**.
+- **The frame** (`movicom ui frame` / `ui f`): every action returns ONE object —
+  `{app, read:[...content...], do:["1 type <text>","2 send","3 up","4 down",
+  "5 back","6 home","7 open: <row>", … ,"N more (k more)"]}`. Read the content,
+  pick `ui do <n>`, get the next frame back. The model NEVER needs app-specific
+  labels — movicom CLASSIFIES the raw tree into a fixed vocabulary
+  (input/submit/nav/more/open). Same gestures drive WhatsApp, Gmail, Settings.
+- **`ui do <n> ["text"]`** runs the nth action and folds the fresh frame into its
+  result (`{did, frame}`). Numbered = cheapest AIX; act→see always closed.
+- **Proven on WhatsApp:** sent a DM with TWO commands, zero labels/coords:
+  `ui do 1 "Decimo test…"` → typed; `ui do 2` → sent. Verified in chat history.
+- **Bugs found + fixed by dogfooding the frame live:**
+  - `type` APPENDED to an existing draft (leftover "test\> here oNoveno…"). Fixed:
+    `_clearInput()` (select-all + DEL) before typing in the `do` input path.
+  - `do` list was noisy ("Back" dup of the verb, timestamps, "Delivered" as
+    opens). Fixed: classifier drops NAV-dup + status/timestamp rows into `read`.
+  - WhatsApp hides Send when the input is empty → no `send` verb until you type
+    (correct: can't send empty). Reappears after `do 1`.
+- **typeText() escaping rebuilt** (3 sites unified): device `input text` is
+  ASCII-ONLY on the Moto G06 — accents AND emoji throw NullPointerException and
+  drop the whole message. Now: transliterate accents (qué→que, ñ→n) so LATAM text
+  stays readable, drop emoji, escape shell specials (a "->" had tried to REDIRECT
+  to a Read-only file). Verified live.
+- **Keyboard auto-dismiss** baked into every action (`_dismissKb` = BACK only if
+  IME shown). Replaces the broken `kbd off` (`ime disable` doesn't close in-app
+  panels on real OEM phones — Andy watched the emoji keyboard stay open).
+- **`notif list` is now heartbeat-grade:** full pkg + short app + title (catches
+  SpannableString) + text + when(epoch) + key(dedupe/dismiss) + category;
+  `--since <ms>` (only-new) and `--apps a,b` (allow-list); default drops OS/OEM
+  noise (795 tok → ~0 when nothing real pending). THE cron→heartbeat primitive.
+- **Old verbs kept** (`ui see/tap/fill/send`) so nothing breaks; frame is the new
+  front door. NEXT: 3-app agnosticism probe (WhatsApp/Gmail/Settings, same `do N`
+  grammar), then commit movicom + update skill/README/AGENTS with the frame.
+
 ### 2026-05-31 (later) — EMAIL SENT ✅ + movicom root cause found & fix spec'd
 - **Andy's call (correct):** fix movicom BEFORE a 9B model uses it. I sent the
   email by hand to pin the bug. **Result: email "Hello from Michi" → andycufari@
